@@ -1,0 +1,139 @@
+#---------------------------------------------------------
+# Main screen
+#---------------------------------------------------------
+<NotesManagerWidget>
+	# BoxLayout:
+	orientation: 'vertical'
+	#--------------------------------- Main buttons
+	ActionBar:
+		pos_hint: {'top':1}
+		ActionView:
+			use_separator: True
+			ActionPrevious:
+				title: ''
+				with_previous: False
+				app_icon: ''
+				previous_icon: ''
+			ActionButton:
+				important: True
+				icon: 'icons/open.png'
+				text: _('Open')
+				on_release: 
+					if hasattr(root, 'open'): getattr(root, 'open')()
+			ActionButton:
+				important: True
+				icon: 'icons/exit.png'
+				text: _('Exit')
+				on_release: 
+					if hasattr(root, 'exit'): getattr(root, 'exit')()
+			ActionOverflow:
+	
+	BoxFrame:
+		padding: dp(10), dp(0)
+		size_hint: 1, None
+		height: dp(100)
+		
+		GridLayout:
+			cols: 3
+
+			
+			FieldLabel:
+				id: _lab_page
+				size_hint_x: None
+				disabled: True
+				text: _('Page & position')
+			CheckBox:
+				active: True
+				size_hint_x: None
+				disabled: True
+				on_active:
+					if hasattr(root, 'page_position'): getattr(root, 'page_position')()
+			Widget:
+			FieldLabel:
+				id: _lab_summary
+				size_hint_x: None
+				disabled: True
+				text: _('Summary')
+			CheckBox:
+				active: False
+				size_hint_x: None
+				disabled: True
+				on_active:
+					if hasattr(root, 'summary'): getattr(root, 'summary')()
+			Widget:
+	
+	
+	BoxLayout:
+		orientation: 'horizontal'	
+	
+		ScrollView:
+			id: _scr_content
+			do_scroll_x: False
+			do_scroll_y: True
+			canvas:
+				# Color:
+					# rgb: frame_color
+				Line:
+					rectangle: self.x, self.y, self.width, self.height
+					width: 1.0
+					joint: 'bevel'
+					
+			Label:
+				id: _out_content
+				size_hint: 1, None
+				halign: 'left'
+				valign: 'center'
+				text_size: _scr_content.width, None
+				size: self.texture_size
+				text: _('Parsed content:\n\n')
+				padding: 10, 10
+				canvas.before:
+					Color:
+						rgba: 0.0, 0.8, 0.0, 0.4
+					Rectangle:
+						pos: self.pos
+						size: self.size
+	
+		ScrollView:
+			id: _scr_log
+			do_scroll_x: False
+			do_scroll_y: True
+			size_hint_x: 0.3
+			canvas:
+				# Color:
+					# rgb: frame_color
+				Line:
+					rectangle: self.x, self.y, self.width, self.height
+					width: 1.0
+					joint: 'bevel'
+			
+			Label:
+				id: _out_log
+				size_hint: 1, None
+				halign: 'left'
+				valign: 'center'
+				text_size: _scr_log.width, None
+				size: self.texture_size
+				text: _('App Log:\n\n')
+				padding: 10, 10
+
+	GridLayout:
+		rows: 2
+		# orientation: 'vertical'
+		padding: dp(2), dp(2), dp(2), 0
+		size_hint: 1, None
+		height: 2 * nav_button_size[1]
+		
+		NavButton:
+			id: _btn_write
+			size_hint: 1, 1
+			text: _('Save as a map')
+			on_release: 
+				if hasattr(app, 'write_map'): getattr(app, 'write_map')()
+				
+		NavButton:
+			id: _btn_write
+			size_hint: 1, 1
+			text: _('Save as a html')
+			on_release: 
+				if hasattr(app, 'write_html'): getattr(app, 'write_html')()
