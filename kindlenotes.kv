@@ -10,7 +10,7 @@
 		ActionView:
 			use_separator: True
 			ActionPrevious:
-				title: ''
+				title: app.file
 				with_previous: False
 				app_icon: ''
 				previous_icon: ''
@@ -34,50 +34,59 @@
 		height: dp(100)
 		
 		GridLayout:
-			cols: 3
+			cols: 5
 
 			
 			FieldLabel:
-				id: _lab_page
+				id: _lab_page_on
 				size_hint_x: None
-				disabled: True
+				# disabled: True
 				text: _('Page & position')
 			CheckBox:
+				id: _chk_page_on
 				active: True
 				size_hint_x: None
-				disabled: True
+				# disabled: True
 				on_active:
 					if hasattr(root, 'page_position'): getattr(root, 'page_position')()
 			Widget:
 			FieldLabel:
-				id: _lab_summary
+				id: _lab_summary_on
 				size_hint_x: None
-				disabled: True
+				# disabled: True
 				text: _('Summary')
 			CheckBox:
+				id: _chk_summary_on
 				active: False
 				size_hint_x: None
-				disabled: True
+				# disabled: True
 				on_active:
 					if hasattr(root, 'summary'): getattr(root, 'summary')()
-			Widget:
+			# Widget:
 	
 	
 	BoxLayout:
-		orientation: 'horizontal'	
+		orientation: 'horizontal'
+		
 	
 		ScrollView:
 			id: _scr_content
 			do_scroll_x: False
 			do_scroll_y: True
-			canvas:
+			canvas.before:
 				# Color:
-					# rgb: frame_color
+					# rgba: 0.0, 0.8, 0.0, 0.4
+				Rectangle:
+					pos: self.pos
+					size: self.size
+					source: 'icons/background.png'
+			# canvas.after:
+				Color:
+					rgba: 0.9, 0.9, 0.9
 				Line:
 					rectangle: self.x, self.y, self.width, self.height
-					width: 1.0
+					width: 1.2
 					joint: 'bevel'
-					
 			Label:
 				id: _out_content
 				size_hint: 1, None
@@ -87,24 +96,25 @@
 				size: self.texture_size
 				text: _('Parsed content:\n\n')
 				padding: 10, 10
-				canvas.before:
-					Color:
-						rgba: 0.0, 0.8, 0.0, 0.4
-					Rectangle:
-						pos: self.pos
-						size: self.size
 	
 		ScrollView:
 			id: _scr_log
 			do_scroll_x: False
 			do_scroll_y: True
 			size_hint_x: 0.3
-			canvas:
+			canvas.before:
 				# Color:
-					# rgb: frame_color
+					# rgba: 0.0, 0.8, 0.0, 0.4
+				Rectangle:
+					pos: self.pos
+					size: self.size
+					source: 'icons/background.png'
+			# canvas.after:
+				Color:
+					rgba: 0.9, 0.9, 0.9
 				Line:
 					rectangle: self.x, self.y, self.width, self.height
-					width: 1.0
+					width: 1.2
 					joint: 'bevel'
 			
 			Label:

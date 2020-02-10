@@ -3,7 +3,7 @@ import os
 
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
-icons_dir = '%s\data\icons' % (current_dir)
+icons_dir = '%s\icons' % (current_dir)
 data_dir = '%s\data' % (current_dir)
 locale_dir = '%s\locale' % (current_dir)
 
@@ -26,4 +26,4 @@ def translate(languages=['il']):
 
 
 # Command specification
-
+ICON = 'reader.png'

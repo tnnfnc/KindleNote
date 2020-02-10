@@ -37,6 +37,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.lang.builder import Builder
 from kivy.properties import ObjectProperty
+from kivy.properties import StringProperty
 from filemanager import OpenFilePopup, SaveFilePopup, message, decision
 dummy = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dummy)
@@ -48,7 +49,7 @@ kivy.require('1.11.0')  # Current kivy version
 
 MAJOR = 1
 MINOR = 0
-MICRO = 0
+MICRO = 2
 RELEASE = True
 __version__ = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
@@ -103,7 +104,7 @@ class NotesManagerWidget(BoxLayout):
 
     def content(self, content):
         self.ids._out_content.text += f'\n{content}'
-        
+
     def clear_content(self):
         self.ids._out_content.text = _('Parsed content:\n\n')
 
@@ -116,16 +117,17 @@ class KindleNotesApp(App):
     # SETTINGS = 'Settings'
 
     use_kivy_settings = True
+    file = StringProperty('')
 
     def __init__(self, **kwargs):
         super(KindleNotesApp, self).__init__(**kwargs)
-        self.builder = None
         self.root = root = NotesManagerWidget()
-        self.file = None
+        self.builder = None
+        self.document = None
 
     def build(self):
         self.title = 'KindleNotes %s' % (__version__)
-        # self.icon = '%s\\%s' % (conf.icons_dir, conf.ICON)
+        self.icon = '%s\\%s' % (conf.icons_dir, conf.ICON)
 
         return self.root
 
@@ -168,21 +170,18 @@ class KindleNotesApp(App):
     def open(self, file):
         if file:
             self.file = file
-            self.builder = FreeMapBuilder()
-            self.parse()
+            self.log(_('Opening file: %s' % (file)))
+            self.buid_document()
         else:
             self.log(_('No file was loaded'))
 
     def write_map(self):
         """Transform to FreeMind"""
-        if self.file:
-            self.builder = FreeMapBuilder()
-            self.parse()
+        if self.file and self.document:
             try:
-                document = self.builder.document()
                 file = '%s.mm' % (self.file)
-                document.write(file,
-                               encoding='utf-8', xml_declaration=False)
+                self.document.write(file,
+                                    encoding='utf-8', xml_declaration=False)
                 self.log(_('Converted into map: %s') % (file))
             except Exception as err:
                 self.log(_('Error creating map: %s') % (file))
@@ -191,9 +190,8 @@ class KindleNotesApp(App):
 
     def write_html(self):
         """Transform to html"""
-        if self.file:
-            self.builder = FreeMapBuilder()
-            self.parse()
+        if self.file and self.document:
+            # self.builder = HtmlMapBuilder()
             try:
                 self.log(_('Option not available'))
             except Exception as err:
@@ -213,12 +211,18 @@ class KindleNotesApp(App):
         """Exit the app doing nothing. """
         self.stop()
 
-    def parse(self):
-        """Open the file"""
-        self.root.clear_content()
-        self.root.clear_log()
-        builder = self.builder
-        finput = 'notes.html'
+    def buid_document(self):
+        """
+        Parse the file to FreeMap format. This format is the starting 
+        point for converting to other ones.
+        """
+        # Parameters
+        # Add page numbers
+        page_on = self.root.ids._chk_page_on.active
+        # Append the table of content (html only)
+        summary_on = self.root.ids._chk_summary_on.active
+
+        builder = FreeMapBuilder(page_on=page_on, summary_on=summary_on)
         errs = []
         tree = []
         try:
@@ -234,43 +238,56 @@ class KindleNotesApp(App):
             message(_('Open'), f'"{os.path.basename(self.file)}":\n{e}', 'e')
             return False
         # Fields extraction
-        builder.XMLroot()
-        element = soup.find_all("div", class_="bookTitle", limit=1)[0]
-        self.log(_('Start parsing'))
-        while element:
-            if isinstance(element, Tag):
-                try:
-                    # 1 - title: div class="bookTitle"
-                    if "bookTitle" in element['class']:
-                        text = builder.bookTitle(element)
-                        tree.append((0, text))
-                    # 1 - authors: div class="authors"
-                    if "authors" in element['class']:
-                        text = builder.bookTitle(element)
-                        tree.append((0, text))
-                    # 1 - citation: div class="citation"
-                    if "citation" in element['class']:
-                        text = builder.bookTitle(element)
-                        tree.append((0, text))
-                    # 1 - sectionHeading: div class="sectionHeading"
-                    if "sectionHeading" in element['class']:
-                        text = builder.bookTitle(element)
-                        tree.append((1, text))
-                    if "noteHeading" in element['class']:
-                        text = builder.bookTitle(element)
-                        tree.append((3, text))
-                    # 1 - noteText: div class="noteText"
-                    if "noteText" in element['class']:
-                        text = builder.bookTitle(element)
-                        tree.append((2, text))
-                except Exception as err:
-                    errs.append(err)
-            element = element.next_sibling
-
+        try:
+            builder.XMLroot()
+            element = soup.find_all("div", class_="bookTitle", limit=1)[0]
+            self.log(_('Start parsing'))
+            while element:
+                if isinstance(element, Tag):
+                    try:
+                        # 1 - title: div class="bookTitle"
+                        if "bookTitle" in element['class']:
+                            text = builder.bookTitle(element)
+                            tree.append((0, text))
+                        # 1 - authors: div class="authors"
+                        if "authors" in element['class']:
+                            text = builder.authors(element)
+                            tree.append((0, text))
+                        # 1 - citation: div class="citation"
+                        if "citation" in element['class']:
+                            text = builder.citation(element)
+                            tree.append((0, text))
+                        # 1 - sectionHeading: div class="sectionHeading"
+                        if "sectionHeading" in element['class']:
+                            text = builder.sectionHeading(element)
+                            tree.append((1, text))
+                        if "noteHeading" in element['class']:
+                            text = builder.noteHeading(element)
+                            tree.append((3, text))
+                        # 1 - noteText: div class="noteText"
+                        if "noteText" in element['class']:
+                            text = builder.noteText(element)
+                            tree.append((2, text))
+                    except Exception as err:
+                        errs.append(err)
+                element = element.next_sibling
+        except Exception as err:
+            errs.append(_('Error parsing the file'))
+        # Logging
+        self.root.clear_content()
+        self.root.clear_log()
         self.log(_('End parsing %s lines') % (len(tree)))
         text = '\n'.join([f'Level: {a[0]}> {a[1]}' for a in tree])
         self.content(text)
         self.log(errs)
+        if len(tree) > 0:
+            self.log(_('Conversion ok'))
+            try:
+                self.document = builder.document()
+            except Exception as err:
+                self.log(_('Error creating map'))
+        else:
+            self.log(_('Error creating map'))
 
 
 if __name__ == '__main__':

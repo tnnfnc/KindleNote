@@ -16,13 +16,14 @@ def java_date(date):
 
 class FreeMapBuilder(MapBuilder):
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.root = None
         self.chapter = None
         self.center = None
         self.node = None
         self.counter = 1
+        self.kwargs = kwargs
 
     def XMLroot(self, element='map', **kwargs):
         # if root raise RootException
@@ -42,6 +43,8 @@ class FreeMapBuilder(MapBuilder):
                   'MODIFIED': str(now),
                   'TEXT': text}
         self.center = ET.SubElement(self.root, 'node', attrib=attrib)
+        ET.SubElement(self.center, 'font', attrib={
+            'BOLD': "true", 'NAME': "SansSerif", 'SIZE': "14"})
         return text
 
     def authors(self, element, **kwargs):
@@ -78,45 +81,51 @@ class FreeMapBuilder(MapBuilder):
         attrib = {'COLOR': "#0033ff",
                   'CREATED': str(now),
                   'ID': self._ID(),
-                  'FOLDED': "false",
+                  'FOLDED': "true",
                   #   'LINK': "",
                   'MODIFIED': str(now),
                   'POSITION': "right",
                   'TEXT': text}
         self.counter += 1
         self.chapter = ET.SubElement(self.center, 'node', attrib=attrib)
+        # <font BOLD="true" NAME="SansSerif" SIZE="14"/>
+        ET.SubElement(self.chapter, 'font', attrib={
+                      'BOLD': "true", 'NAME': "SansSerif", 'SIZE': "12"})
         return text
 
     def noteHeading(self, element, **kwargs):
         now = java_date(datetime.datetime.now(tz=datetime.timezone.utc))
         text = self._formatText(element)
-        attrib = {'COLOR': "#0033ff",
-                  'CREATED': str(now),
-                  'ID': self._ID(),
-                  'FOLDED': "false",
-                  #   'LINK': "",
-                  'MODIFIED': str(now),
-                  'POSITION': "right",
-                  'TEXT': text}
+        attrib = {'COLOR': "#990000",
+                'CREATED': str(now),
+                'ID': self._ID(),
+                'FOLDED': "true",
+                #   'LINK': "",
+                'MODIFIED': str(now),
+                'POSITION': "right",
+                'TEXT': text}
         self.node = ET.Element('node', attrib=attrib)
+        ET.SubElement(self.node, 'font', attrib={
+            'BOLD': "true", 'NAME': "SansSerif", 'SIZE': "10"})
         return text
 
     def noteText(self, element, **kwargs):
         now = java_date(datetime.datetime.now(tz=datetime.timezone.utc))
         text = self._formatText(element)
-        attrib = {'COLOR': "#0033ff",
+        attrib = {'COLOR': "#000000",
                   'CREATED': str(now),
                   'ID': self._ID(),
-                  'FOLDED': "false",
+                  'FOLDED': "true",
                   #   'LINK': "",
                   'MODIFIED': str(now),
                   'POSITION': "right",
                   'TEXT': text}
         if not self.node is None:
             node = ET.SubElement(self.chapter, 'node', attrib=attrib)
-            node.insert(0, self.node)
+            if self.kwargs and self.kwargs.get('page_on'):
+                node.insert(0, self.node)
             self.node = None
-        return text   
+        return text
 
     def document(self):
         return ET.ElementTree(self.root)
