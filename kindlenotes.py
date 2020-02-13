@@ -24,7 +24,7 @@
             is _inp_key, the kivy property is pr_key.
 """
 from bs4 import BeautifulSoup, Tag
-from builders.freemapbuilder import FreeMapBuilder
+from builders.mapbuilders import FreeMapBuilder, NotesParser
 import base64
 import json
 import re
@@ -81,7 +81,7 @@ class OpenFile(OpenFilePopup):
         self.dismiss()
 
     def is_valid(self, folder, file):
-        return True
+        return os.path.isdir(file) or os.path.splitext(file)[1] in ['.html', '.xml', '.mm']
 
 
 class NotesManagerWidget(BoxLayout):
@@ -111,6 +111,14 @@ class NotesManagerWidget(BoxLayout):
     def clear_log(self):
         self.ids._out_log.text = _('App Log:\n\n')
 
+    def update_gui(self, **kwargs):
+        self.ids._inp_chapter_low.text = str(
+            kwargs.get('chapter_range', [0, 0])[0])
+        self.ids._inp_chapter_high.text = str(kwargs.get(
+            'chapter_range', (0, 0))[1])
+        self.ids._inp_level_low.text = str(
+            kwargs.get('level_range', [0, 0])[1])
+
 
 class KindleNotesApp(App):
     # Defaults constants
@@ -123,6 +131,7 @@ class KindleNotesApp(App):
         super(KindleNotesApp, self).__init__(**kwargs)
         self.root = root = NotesManagerWidget()
         self.builder = None
+        # Internal document
         self.document = None
 
     def build(self):
@@ -169,27 +178,36 @@ class KindleNotesApp(App):
 
     def open(self, file):
         if file:
+            self.root.clear_content()
+            self.root.clear_log()
             self.file = file
             self.log(_('Opening file: %s' % (file)))
-            self.buid_document()
+            # Build internal document
+            self.build_document()
         else:
             self.log(_('No file was loaded'))
 
     def write_map(self):
-        """Transform to FreeMind"""
+        """Transform from internal document to FreeMind"""
         if self.file and self.document:
             try:
+                # converter = FreeMapConverter()
+                # converter.convert(self.document)
+                # xml_string = converter.to_string()
+                # self.root.clear_content()
+                # self.root.content(xml_string)
+
                 file = '%s.mm' % (self.file)
-                self.document.write(file,
-                                    encoding='utf-8', xml_declaration=False)
-                self.log(_('Converted into map: %s') % (file))
+                self.document.document.write(file,
+                                             encoding='utf-8', xml_declaration=False)
+                self.log(_('Saved to map: %s') % (file))
             except Exception as err:
-                self.log(_('Error creating map: %s') % (file))
+                self.log(_('Error creating map'))
         else:
             self.log(_('No file was loaded'))
 
     def write_html(self):
-        """Transform to html"""
+        """Transform from internal document to html"""
         if self.file and self.document:
             # self.builder = HtmlMapBuilder()
             try:
@@ -211,83 +229,24 @@ class KindleNotesApp(App):
         """Exit the app doing nothing. """
         self.stop()
 
-    def buid_document(self):
+    def build_document(self):
         """
-        Parse the file to FreeMap format. This format is the starting 
-        point for converting to other ones.
+        Build internal document: parse the file to FreeMap format.
+        This format is the starting point for converting to other ones.
         """
-        # Parameters
-        # Add page numbers
-        page_on = self.root.ids._chk_page_on.active
-        # Append the table of content (html only)
-        summary_on = self.root.ids._chk_summary_on.active
-
-        builder = FreeMapBuilder(page_on=page_on, summary_on=summary_on)
-        errs = []
-        tree = []
-        try:
-            with open(file=self.file, encoding='UTF-8') as f:
-                soup = BeautifulSoup(f, features="html.parser")
-            self.log(_('Open file: %s') % (self.file))
-        except IOError as e:
-            message(
-                _('Open'), _('Invalid file: "%s":\n%s') % (os.path.basename(self.file), e), 'e')
-            self.file = None
-            return False
-        except ValueError as e:
-            message(_('Open'), f'"{os.path.basename(self.file)}":\n{e}', 'e')
-            return False
-        # Fields extraction
-        try:
-            builder.XMLroot()
-            element = soup.find_all("div", class_="bookTitle", limit=1)[0]
-            self.log(_('Start parsing'))
-            while element:
-                if isinstance(element, Tag):
-                    try:
-                        # 1 - title: div class="bookTitle"
-                        if "bookTitle" in element['class']:
-                            text = builder.bookTitle(element)
-                            tree.append((0, text))
-                        # 1 - authors: div class="authors"
-                        if "authors" in element['class']:
-                            text = builder.authors(element)
-                            tree.append((0, text))
-                        # 1 - citation: div class="citation"
-                        if "citation" in element['class']:
-                            text = builder.citation(element)
-                            tree.append((0, text))
-                        # 1 - sectionHeading: div class="sectionHeading"
-                        if "sectionHeading" in element['class']:
-                            text = builder.sectionHeading(element)
-                            tree.append((1, text))
-                        if "noteHeading" in element['class']:
-                            text = builder.noteHeading(element)
-                            tree.append((3, text))
-                        # 1 - noteText: div class="noteText"
-                        if "noteText" in element['class']:
-                            text = builder.noteText(element)
-                            tree.append((2, text))
-                    except Exception as err:
-                        errs.append(err)
-                element = element.next_sibling
-        except Exception as err:
-            errs.append(_('Error parsing the file'))
+        parser = NotesParser()
+        self.document = parser.parse(self.file)
+        logs = parser.getlogs()
         # Logging
-        self.root.clear_content()
-        self.root.clear_log()
-        self.log(_('End parsing %s lines') % (len(tree)))
-        text = '\n'.join([f'Level: {a[0]}> {a[1]}' for a in tree])
-        self.content(text)
-        self.log(errs)
-        if len(tree) > 0:
-            self.log(_('Conversion ok'))
-            try:
-                self.document = builder.document()
-            except Exception as err:
-                self.log(_('Error creating map'))
+        for log in logs:
+            self.root.log(log)
+
+        if self.document:
+            self.root.log(_('Conversion ok'))
+            self.root.content(self.document.string)
+            self.root.update_gui(chapter_range=self.document.headings, level_range=self.document.levels)
         else:
-            self.log(_('Error creating map'))
+            self.root.log(_('Conversion failed'))
 
 
 if __name__ == '__main__':

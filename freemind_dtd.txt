@@ -1,0 +1,95 @@
+map-> {'version': '1.0.1'}
+node-> root
+node-> 1
+node-> 1.1
+node-> 1.2
+node-> 1.2.1
+node-> 1.2.2
+node-> 1.3
+node-> 2
+node-> 3
+node-> 3.1
+node-> 3.2
+
+FORMATTED:
+map-> {'version': '1.0.1'}
+node-> root
+font-> {'NAME': 'SansSerif', 'SIZE': '20'}
+hook-> {'NAME': 'accessories/plugins/AutomaticLayout.properties'}
+node-> 1
+edge-> {'STYLE': 'sharp_bezier', 'WIDTH': '8'}
+font-> {'NAME': 'SansSerif', 'SIZE': '18'}
+node-> 1.1
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+node-> 1.2
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+node-> 1.2.1
+font-> {'NAME': 'SansSerif', 'SIZE': '14'}
+node-> 1.2.2
+font-> {'NAME': 'SansSerif', 'SIZE': '14'}
+node-> 1.3
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+node-> 2
+edge-> {'STYLE': 'sharp_bezier', 'WIDTH': '8'}
+font-> {'NAME': 'SansSerif', 'SIZE': '18'}
+node-> 3
+edge-> {'STYLE': 'sharp_bezier', 'WIDTH': '8'}
+font-> {'NAME': 'SansSerif', 'SIZE': '18'}
+node-> 3.1
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+node-> 3.2
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+
+HIERARCHY
+new parent:  map
+map-> {'version': '1.0.1'}
+node-> root
+new parent:  font
+font-> {'NAME': 'SansSerif', 'SIZE': '20'}
+new parent:  hook
+hook-> {'NAME': 'accessories/plugins/AutomaticLayout.properties'}
+new parent:  1
+node-> 1
+edge-> {'STYLE': 'sharp_bezier', 'WIDTH': '8'}
+font-> {'NAME': 'SansSerif', 'SIZE': '18'}
+node-> 1.1
+new parent:  edge
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+new parent:  font
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+new parent:  1.2
+node-> 1.2
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+node-> 1.2.1
+new parent:  font
+font-> {'NAME': 'SansSerif', 'SIZE': '14'}
+new parent:  1.2.2
+node-> 1.2.2
+font-> {'NAME': 'SansSerif', 'SIZE': '14'}
+new parent:  1.3
+node-> 1.3
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+new parent:  2
+node-> 2
+edge-> {'STYLE': 'sharp_bezier', 'WIDTH': '8'}
+font-> {'NAME': 'SansSerif', 'SIZE': '18'}
+new parent:  3
+node-> 3
+edge-> {'STYLE': 'sharp_bezier', 'WIDTH': '8'}
+font-> {'NAME': 'SansSerif', 'SIZE': '18'}
+node-> 3.1
+new parent:  edge
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+new parent:  font
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
+new parent:  3.2
+node-> 3.2
+edge-> {'STYLE': 'bezier', 'WIDTH': 'thin'}
+font-> {'NAME': 'SansSerif', 'SIZE': '16'}
