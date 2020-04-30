@@ -24,7 +24,7 @@
             is _inp_key, the kivy property is pr_key.
 """
 from bs4 import BeautifulSoup, Tag
-from builders.mapbuilders import FreeMapBuilder, NotesParser
+from builders.mapbuilders import FreeMapBuilder, NotesParser, explore, remove_pages
 import base64
 import json
 import re
@@ -49,7 +49,7 @@ kivy.require('1.11.0')  # Current kivy version
 
 MAJOR = 1
 MINOR = 0
-MICRO = 2
+MICRO = 4
 RELEASE = True
 __version__ = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
@@ -109,7 +109,7 @@ class NotesManagerWidget(BoxLayout):
         self.ids._out_content.text = _('Parsed content:\n\n')
 
     def clear_log(self):
-        self.ids._out_log.text = _('App Log:\n\n')
+        self.ids._out_log.text = _('App Logs:\n')
 
     def update_gui(self, **kwargs):
         self.ids._inp_chapter_low.text = str(
@@ -118,6 +118,14 @@ class NotesManagerWidget(BoxLayout):
             'chapter_range', (0, 0))[1])
         self.ids._inp_level_low.text = str(
             kwargs.get('level_range', [0, 0])[1])
+
+    def get_options(self):
+        return {
+            'section_range': (self.ids._inp_chapter_low.text, self.ids._inp_chapter_high.text),
+            'level_low': self.ids._inp_level_low.text,
+            'pages': self.ids._chk_page_on.active == True,
+            'summary': self.ids._chk_summary_on.active == True
+        }
 
 
 class KindleNotesApp(App):
@@ -191,18 +199,16 @@ class KindleNotesApp(App):
         """Transform from internal document to FreeMind"""
         if self.file and self.document:
             try:
-                # converter = FreeMapConverter()
-                # converter.convert(self.document)
-                # xml_string = converter.to_string()
-                # self.root.clear_content()
-                # self.root.content(xml_string)
+                # Options take effect here:
+                # Include page positions: _TYPE': HEADING
+
+                document = self.filter_document()
 
                 file = '%s.mm' % (self.file)
-                self.document.document.write(file,
-                                             encoding='utf-8', xml_declaration=False)
+                document.write(file, encoding='utf-8', xml_declaration=False)
                 self.log(_('Saved to map: %s') % (file))
             except Exception as err:
-                self.log(_('Error creating map'))
+                self.log(_('Error creating map: %s') % (err))
         else:
             self.log(_('No file was loaded'))
 
@@ -216,6 +222,25 @@ class KindleNotesApp(App):
                 self.log(_('Error creating map: %s') % (file))
         else:
             self.log(_('No file was loaded'))
+
+    def filter_document(self):
+        """Apply formatting options to the document. 
+        Return a document."""
+        document = self.document
+        options = self.root.get_options()
+
+        if options.get('section_range', None):
+            pass
+        if options.get('level_range', None):
+            pass
+        if options.get('pages', None): # include pages
+            pass
+        else: # remove page numbers
+            document = remove_pages(self.document)
+        if options.get('summary', None):
+            pass
+
+        return document
 
     def content(self, text):
         """Log action"""
@@ -242,9 +267,13 @@ class KindleNotesApp(App):
             self.root.log(log)
 
         if self.document:
+            docinfo = explore(self.document)
             self.root.log(_('Conversion ok'))
-            self.root.content(self.document.string)
-            self.root.update_gui(chapter_range=self.document.headings, level_range=self.document.levels)
+            self.root.content(docinfo['text'][0:5000])
+            self.root.update_gui(
+                chapter_range=(1, docinfo['max_section_counter']),
+                level_range=(1, docinfo['max_node_level'])
+            )
         else:
             self.root.log(_('Conversion failed'))
 

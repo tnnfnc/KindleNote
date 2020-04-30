@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup, Tag
 import random
 import datetime
+import io
 
 MAP = 'map'
 TITLE = 'title'
@@ -38,9 +39,10 @@ def node_text(element, level, length=70):
         return f'\n{level}-{element.tag}> ...'
 
 
-def hierarchy(document):
+def explore(document):
     """
-    Return a couple (text, hierarchy) from a xml document.
+    Return a text representation, the parents list, the maximum 
+    section depth, the maximun element depth.
     """
     text = ''
     root = document.getroot()
@@ -57,49 +59,34 @@ def hierarchy(document):
                 parents[level] = node
             else:
                 parents.append(node)
-        if '_TYPE' in node.attrib and node.attrib['_TYPE'] == SECTION:
-            count = max(int(node.attrib['_COUNT']), count)
-            node_level = max(int(node.attrib['_LEVEL']), node_level)
+        if '_node_type' in node.attrib and node.attrib['_node_type'] == SECTION:
+            count = max(int(node.attrib['_section_counter']), count)
+            node_level = max(int(node.attrib['_node_level']), node_level)
         else:
             node_level = max(level, node_level)
             # _type = _types[level] if level < len(_types) else ''
-            # _count = _count + 1 if level == 2 else 0
-            # attrib = {'_TYPE': _type, '_LEVEL': f'{level}', '_COUNT': f'{_count}'}
+            # _section_counter = _section_counter + 1 if level == 2 else 0
+            # attrib = {'_node_type': _type, '_node_level': f'{level}', '_section_counter': f'{_section_counter}'}
 
         # Text
         text += node_text(node, level)
-    return text, parents, node_level, count
+    return {'text': text,
+            'parents': parents,
+            'max_node_level': node_level,
+            'max_section_counter': count}
 
 
-class XmlMapDocument(object):
-    def __init__(self, document, **kwargs):
-        self._document = document
-        self._text, self._hierarchy, self._levels, self._headings = hierarchy(
-            document)
+def remove_pages(document):
+    """Remove the element 'note heading' from the document"""
+    s = ET.tostring(element=document.getroot(), encoding='utf-8')
+    root = ET.fromstring(s)
+    for element in root.iter('node'):
+        headings = [e for e in element.findall(
+            'node') if e.attrib.get('_node_type') == HEADING]
+        if headings:
+            element.remove(headings[0])
 
-    @property
-    def document(self):
-        return self._document
-
-    @property
-    def string(self):
-        if self._text:
-            return self._text
-        return None
-
-    @property
-    def hierarchy(self):
-        if self._hierarchy:
-            return self._hierarchy
-        return None
-
-    @property
-    def headings(self):
-        return (1, self._headings)
-
-    @property
-    def levels(self):
-        return (0, self._levels)
+    return ET.ElementTree(root)
 
 
 class NotesParser():
@@ -118,9 +105,11 @@ class NotesParser():
             with open(file=file, encoding='UTF-8') as f:
                 soup = BeautifulSoup(f, features="html.parser")
             if soup.find('html') and soup.select('div[class="bookTitle"]'):
-                return XmlMapDocument(self.parse_html(file))
+                # return XmlMapDocument(self.parse_html(file))
+                return self.parse_html(file)
             elif soup.find('map') and soup.find('node'):
-                return XmlMapDocument(self.parse_xml(file))
+                # return XmlMapDocument(self.parse_xml(file))
+                return self.parse_xml(file)
 
         except Exception as e:
             self.logs.append(f'{e}')
@@ -152,6 +141,7 @@ class NotesParser():
                         if "sectionHeading" in element['class']:
                             builder.sectionHeading(element)
                         # 1 - noteHeading: div class="noteHeading"
+                        # Contains the page number
                         if "noteHeading" in element['class']:
                             builder.noteHeading(element)
                         # 1 - noteText: div class="noteText"
@@ -160,7 +150,7 @@ class NotesParser():
                     except Exception as e:
                         self.logs.append(f'{e}')
                 element = element.next_sibling
-            return builder.document
+            return builder.get_document()
         except Exception as e:
             self.logs.append(f'{e}')
         return None
@@ -172,8 +162,8 @@ class NotesParser():
 
 class FreeMapBuilder():
     """
-    Convert a HTML formatted file from Kindle Notes to a FreeMap raw
-    formatted file.
+    Convert a HTML formatted file from Kindle Notes to an internal
+    fomat similar to FreeMap raw formatted file.
     """
 
     def __init__(self, **kwargs):
@@ -182,7 +172,7 @@ class FreeMapBuilder():
         self.chapter = None
         self.center = None
         self.node = None
-        self.counter = 0
+        self.section_counter = 0
         self.kwargs = kwargs
 
     def _formatText(self, element, **kwargs):
@@ -210,9 +200,9 @@ class FreeMapBuilder():
                   'ID': ID(),
                   'MODIFIED': str(now),
                   'TEXT': text,
-                  '_TYPE': TITLE,
-                  '_LEVEL': '1',
-                  '_COUNT': f'{self.counter}'}
+                  '_node_type': TITLE,
+                  '_node_level': '1',
+                  '_section_counter': f'{self.section_counter}'}
         self.center = ET.SubElement(self.root, 'node', attrib=attrib)
         ET.SubElement(self.center, 'font', attrib={
             'BOLD': "true", 'NAME': "SansSerif", 'SIZE': "14"})
@@ -229,9 +219,9 @@ class FreeMapBuilder():
                   'MODIFIED': str(now),
                   'POSITION': "right",
                   'TEXT': text,
-                  '_TYPE': AUTHORS,
-                  '_LEVEL': '2',
-                  '_COUNT': f'{self.counter}'}
+                  '_node_type': AUTHORS,
+                  '_node_level': '2',
+                  '_section_counter': f'{self.section_counter}'}
         ET.SubElement(self.center, 'node', attrib=attrib)
         return text
 
@@ -246,16 +236,16 @@ class FreeMapBuilder():
                   'MODIFIED': str(now),
                   'POSITION': "right",
                   'TEXT': text,
-                  '_TYPE': CITATION,
-                  '_LEVEL': '1',
-                  '_COUNT': f'{self.counter}'}
+                  '_node_type': CITATION,
+                  '_node_level': '1',
+                  '_section_counter': f'{self.section_counter}'}
         ET.SubElement(self.center, 'node', attrib=attrib)
         return text
 
     def sectionHeading(self, element, **kwargs):
         now = java_date(datetime.datetime.now(tz=datetime.timezone.utc))
-        text = ' '.join((str(self.counter), self._formatText(element)))
-        self.counter += 1
+        text = ' '.join((str(self.section_counter), self._formatText(element)))
+        self.section_counter += 1
         attrib = {'COLOR': "#0033ff",
                   'CREATED': str(now),
                   'ID': ID(),
@@ -264,9 +254,9 @@ class FreeMapBuilder():
                   'MODIFIED': str(now),
                   'POSITION': "right",
                   'TEXT': text,
-                  '_TYPE': SECTION,
-                  '_LEVEL': '2',
-                  '_COUNT': f'{self.counter}'}
+                  '_node_type': SECTION,
+                  '_node_level': '2',
+                  '_section_counter': f'{self.section_counter}'}
         self.chapter = ET.SubElement(self.center, 'node', attrib=attrib)
         # <font BOLD="true" NAME="SansSerif" SIZE="14"/>
         ET.SubElement(self.chapter, 'font', attrib={
@@ -284,9 +274,9 @@ class FreeMapBuilder():
                   'MODIFIED': str(now),
                   'POSITION': "right",
                   'TEXT': text,
-                  '_TYPE': HEADING,
-                  '_LEVEL': '4',
-                  '_COUNT': f'{self.counter}'}
+                  '_node_type': HEADING,
+                  '_node_level': '4',
+                  '_section_counter': f'{self.section_counter}'}
         self.node = ET.Element('node', attrib=attrib)
         ET.SubElement(self.node, 'font', attrib={
             'BOLD': "true", 'NAME': "SansSerif", 'SIZE': "10"})
@@ -303,15 +293,14 @@ class FreeMapBuilder():
                   'MODIFIED': str(now),
                   'POSITION': "right",
                   'TEXT': text,
-                  '_TYPE': TEXT,
-                  '_LEVEL': '3',
-                  '_COUNT': f'{self.counter}'}
+                  '_node_type': TEXT,
+                  '_node_level': '3',
+                  '_section_counter': f'{self.section_counter}'}
         if not self.node is None:
             node = ET.SubElement(self.chapter, 'node', attrib=attrib)
             node.insert(0, self.node)
             self.node = None
         return text
 
-    @property
-    def document(self):
+    def get_document(self):
         return ET.ElementTree(self.root)
